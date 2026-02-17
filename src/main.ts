@@ -319,6 +319,7 @@ class OverlayManager {
 
 			this.overlayElement.addEventListener("wheel", throttledHandler, {
 				signal,
+				passive: true,
 			});
 		} else {
 			// Mobile: Remove overlay immediately when scrolling starts
@@ -711,6 +712,7 @@ class CheckboxStyleWidget {
 			if (editorContainer) {
 				editorContainer.addEventListener("wheel", throttledHandler, {
 					signal,
+					passive: true,
 				});
 			}
 		}
