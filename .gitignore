@@ -11,6 +11,8 @@ dist/
 
 # Obsidian
 data.json
+# User configuration (but keep defaults)
+**/config.json
 
 # Environment files
 .env

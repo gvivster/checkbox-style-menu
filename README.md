@@ -103,6 +103,55 @@ You can enable/disable any of the 22 available checkbox styles:
 3. Toggle individual styles on/off
 4. Only enabled styles will appear in the selection menu
 
+## Advanced Configuration
+
+### Custom Checkbox Styles
+
+For advanced users, you can completely customize the available checkbox styles by creating a custom configuration file. This allows you to:
+
+- Add new checkbox symbols and descriptions
+- Modify existing symbols and descriptions
+- Remove unwanted styles
+- Create theme-specific or workflow-specific style sets
+
+#### How to Create Custom Styles
+
+1. **Create a configuration file** in your vault:
+   ```
+   .obsidian/plugins/checkbox-style-menu/config.json
+   ```
+
+2. **Add your custom styles** in JSON format:
+   ```json
+   {
+     "checkboxStyles": [
+       { "symbol": "✓", "description": "Completed" },
+       { "symbol": "○", "description": "Todo" },
+       { "symbol": "●", "description": "In Progress" },
+       { "symbol": "✗", "description": "Cancelled" },
+       { "symbol": "!", "description": "Important" }
+     ]
+   }
+   ```
+
+3. **Restart Obsidian** or reload the plugin to apply changes
+
+#### Configuration Format
+
+- **symbol**: A single character to use as the checkbox symbol
+- **description**: Human-readable description shown in the menu
+- Each symbol must be unique and exactly one character long
+
+#### Example Configurations
+
+See `docs/examples/custom-checkbox-styles.json` for a comprehensive example with 30+ custom styles including emojis and special characters.
+
+#### Notes
+
+- If the config file is invalid or missing, the plugin falls back to default styles
+- Changes require restarting Obsidian to take effect
+- The configuration file is stored locally in your vault and not shared
+
 ## Compatibility
 
 - **Obsidian Version**: Requires Obsidian 0.15.0 or later
