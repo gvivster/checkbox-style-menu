@@ -6,18 +6,55 @@
  */
 
 import { PluginConfig, UserConfig, CheckboxStyle, CompatibilitySettings } from './config-types';
-import { readFileSync, existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 
-/** Default checkbox styles loaded from config file */
-const DEFAULT_CHECKBOX_STYLES: CheckboxStyle[] = JSON.parse(
-	readFileSync(join(__dirname, '../../config/default-checkbox-styles.json'), 'utf-8')
-);
+/** Default checkbox styles embedded in code */
+const DEFAULT_CHECKBOX_STYLES: CheckboxStyle[] = [
+	{ symbol: " ", description: "Unchecked" },
+	{ symbol: "x", description: "Regular" },
+	{ symbol: "X", description: "Checked" },
+	{ symbol: "-", description: "Dropped" },
+	{ symbol: ">", description: "Forward" },
+	{ symbol: "D", description: "Date" },
+	{ symbol: "?", description: "Question" },
+	{ symbol: "/", description: "Half Done" },
+	{ symbol: "+", description: "Add" },
+	{ symbol: "R", description: "Research" },
+	{ symbol: "!", description: "Important" },
+	{ symbol: "i", description: "Idea" },
+	{ symbol: "B", description: "Brainstorm" },
+	{ symbol: "P", description: "Pro" },
+	{ symbol: "C", description: "Con" },
+	{ symbol: "Q", description: "Quote" },
+	{ symbol: "N", description: "Note" },
+	{ symbol: "b", description: "Bookmark" },
+	{ symbol: "I", description: "Information" },
+	{ symbol: "p", description: "Paraphrase" },
+	{ symbol: "L", description: "Location" },
+	{ symbol: "E", description: "Example" },
+	{ symbol: "A", description: "Answer" },
+	{ symbol: "r", description: "Reward" },
+	{ symbol: "c", description: "Choice" },
+	{ symbol: "d", description: "Doing" },
+	{ symbol: "T", description: "Time" },
+	{ symbol: "@", description: "Character / Person" },
+	{ symbol: "t", description: "Talk" },
+	{ symbol: "O", description: "Outline / Plot" },
+	{ symbol: "~", description: "Conflict" },
+	{ symbol: "W", description: "World" },
+	{ symbol: "f", description: "Clue / Find" },
+	{ symbol: "F", description: "Foreshadow" },
+	{ symbol: "H", description: "Favorite / Health" },
+	{ symbol: "&", description: "Symbolism" },
+	{ symbol: "s", description: "Secret" },
+];
 
-/** Default compatibility settings loaded from config file */
-const DEFAULT_COMPATIBILITY_SETTINGS: CompatibilitySettings = JSON.parse(
-	readFileSync(join(__dirname, '../../config/default-compatibility-settings.json'), 'utf-8')
-);
+/** Default compatibility settings embedded in code */
+const DEFAULT_COMPATIBILITY_SETTINGS: CompatibilitySettings = {
+	enableTasksCompatibility: false,
+	hasShownTasksNotice: false
+};
 
 /** Default complete configuration */
 const DEFAULT_CONFIG: PluginConfig = {
