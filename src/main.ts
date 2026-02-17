@@ -17,6 +17,8 @@ import {
 	Instance as PopperInstance,
 	Placement,
 } from "@popperjs/core";
+import { loadPluginConfig } from "./config/config-loader";
+import { CheckboxStyle } from "./config/config-types";
 import {
 	isTasksPluginInstalled,
 	shouldUseClickForToggle,
@@ -65,57 +67,8 @@ interface WidgetState {
  * Master registry of all available checkbox styles
  * Each style has a symbol (the character inside [ ]) and a human-readable description
  */
-// Checkbox symbols based on ITS Theme (custom, user-supplied)
-const CHECKBOX_STYLES = [
-	{ symbol: " ", description: "Unchecked" },
-	{ symbol: "x", description: "Regular" },
-	{ symbol: "X", description: "Checked" },
-	{ symbol: "-", description: "Dropped" },
-	{ symbol: ">", description: "Forward" },
-	{ symbol: "D", description: "Date" },
-	{ symbol: "?", description: "Question" },
-	{ symbol: "/", description: "Half Done" },
-	{ symbol: "+", description: "Add" },
-	{ symbol: "R", description: "Research" },
-	{ symbol: "!", description: "Important" },
-	{ symbol: "i", description: "Idea" },
-	{ symbol: "B", description: "Brainstorm" },
-	{ symbol: "P", description: "Pro" },
-	{ symbol: "C", description: "Con" },
-	{ symbol: "Q", description: "Quote" },
-	{ symbol: "N", description: "Note" },
-	{ symbol: "b", description: "Bookmark" },
-	{ symbol: "I", description: "Information" },
-	{ symbol: "p", description: "Paraphrase" },
-	{ symbol: "L", description: "Location" },
-	{ symbol: "E", description: "Example" },
-	{ symbol: "A", description: "Answer" },
-	{ symbol: "r", description: "Reward" },
-	{ symbol: "c", description: "Choice" },
-	{ symbol: "d", description: "Doing" },
-	{ symbol: "T", description: "Time" },
-	{ symbol: "@", description: "Character / Person" },
-	{ symbol: "t", description: "Talk" },
-	{ symbol: "O", description: "Outline / Plot" },
-	{ symbol: "~", description: "Conflict" },
-	{ symbol: "W", description: "World" },
-	{ symbol: "f", description: "Clue / Find" },
-	{ symbol: "F", description: "Foreshadow" },
-	{ symbol: "H", description: "Favorite / Health" },
-	{ symbol: "&", description: "Symbolism" },
-	{ symbol: "s", description: "Secret" },
-
-	// --- commented out styles present in plugin but not in your ITS list ---
-	// { symbol: '<', description: 'Scheduling' }, // Not used in your ITS list
-	// { symbol: '*', description: 'Star' },      // Not used in your ITS list
-	// { symbol: '"', description: 'Quote' },     // ITS uses Q instead
-	// { symbol: 'l', description: 'Location' },  // Lowercase 'l' not used in ITS
-	// { symbol: 'S', description: 'Savings' },   // Not used in your ITS list
-	// { symbol: 'k', description: 'Key' },       // Not used in your ITS list
-	// { symbol: 'w', description: 'Win' },       // Not used in your ITS list
-	// { symbol: 'u', description: 'Up' },        // Not used in your ITS list
-	// add more here if plugin-only
-] as const;
+// Checkbox styles are now loaded from configuration files
+// See config/default-checkbox-styles.json and src/config/config-loader.ts
 
 /**
  * Regex patterns for identifying and manipulating checkbox markdown
@@ -125,19 +78,24 @@ const CHECKBOX_STYLES = [
 const CHECKBOX_REGEX = /^\s*(?:-|\d+\.)\s*\[(.)\]\s*(.*)?$/;
 const CHECKBOX_SYMBOL_REGEX = /(?:-|\d+\.)\s*\[(.)\]/;
 
-/** Default plugin configuration - basic styles enabled by default */
-const DEFAULT_SETTINGS: CheckboxStyleSettings = {
-	styles: Object.fromEntries(
-		/*        CHECKBOX_STYLES.map(style => [style.symbol, [' ', '/', 'x', '-'].includes(style.symbol)]) */
-		CHECKBOX_STYLES.map((style) => [style.symbol, true]),
-	),
-	triggerMethod: "both", // Default to both methods for maximum flexibility
-	longPressDuration: 350, // Desktop: shorter duration for precise mouse control
-	touchLongPressDuration: 500, // Mobile: longer duration to avoid accidental activation
-	enableHapticFeedback: true, // Haptic feedback on mobile enabled by default
-	enableTasksCompatibility: false, // Off by default - user must opt-in for Tasks integration
-	hasShownTasksNotice: false, // Haven't shown the notice yet
-};
+/**
+ * Creates default plugin settings based on available checkbox styles
+ * @param checkboxStyles - Array of available checkbox styles
+ * @returns Default settings object
+ */
+function createDefaultSettings(checkboxStyles: CheckboxStyle[]): CheckboxStyleSettings {
+	return {
+		styles: Object.fromEntries(
+			checkboxStyles.map((style) => [style.symbol, true]),
+		),
+		triggerMethod: "both", // Default to both methods for maximum flexibility
+		longPressDuration: 350, // Desktop: shorter duration for precise mouse control
+		touchLongPressDuration: 500, // Mobile: longer duration to avoid accidental activation
+		enableHapticFeedback: true, // Haptic feedback on mobile enabled by default
+		enableTasksCompatibility: false, // Off by default - user must opt-in for Tasks integration
+		hasShownTasksNotice: false, // Haven't shown the notice yet
+	};
+}
 
 /**
  * Touch/gesture detection thresholds
@@ -1357,10 +1315,12 @@ const checkboxViewPlugin = ViewPlugin.fromClass(
  */
 export default class CheckboxStyleMenuPlugin extends Plugin {
 	settings!: CheckboxStyleSettings;
-	public checkboxStyles = CHECKBOX_STYLES.map((style) => ({
-		...style,
-		enabled: false,
-	}));
+	public pluginConfig: { checkboxStyles: CheckboxStyle[] };
+	public checkboxStyles: Array<{
+		symbol: string;
+		description: string;
+		enabled: boolean;
+	}> = [];
 
 	/**
 	 * Performance optimization: cache enabled styles to avoid filtering repeatedly
@@ -1373,7 +1333,17 @@ export default class CheckboxStyleMenuPlugin extends Plugin {
 	}> | null = null;
 
 	async onload() {
-		await this.loadSettings();
+		// Load configuration first
+		this.pluginConfig = loadPluginConfig();
+
+		// Initialize checkbox styles from configuration
+		this.checkboxStyles = this.pluginConfig.checkboxStyles.map((style) => ({
+			...style,
+			enabled: false,
+		}));
+
+		await this.loadSettings(createDefaultSettings(this.pluginConfig.checkboxStyles));
+		const defaultSettings = createDefaultSettings(this.pluginConfig.checkboxStyles);
 		this.validateCompatibilitySettings(); // Check compatibility settings on load
 		this.registerCompatibilityWatcher(); // Watch for plugin enable/disables
 		this.updateCheckboxStyles(); // Apply loaded settings to style definitions
@@ -1620,14 +1590,14 @@ export default class CheckboxStyleMenuPlugin extends Plugin {
 	 * Loads settings from disk with comprehensive validation
 	 * Provides fallback values for missing or invalid data
 	 */
-	async loadSettings() {
+	async loadSettings(defaultSettings: CheckboxStyleSettings) {
 		const data = await this.loadData();
 		this.settings = {
-			...DEFAULT_SETTINGS,
+			...defaultSettings,
 			...data,
 			// Validate each setting individually with proper fallbacks
 			styles: this.validateStylesObject(data?.styles),
-			triggerMethod: this.validateTriggerMethod(data?.triggerMethod),
+			triggerMethod: this.validateTriggerMethod(data?.triggerMethod, defaultSettings.triggerMethod),
 			longPressDuration: this.validateDuration(
 				data?.longPressDuration,
 				100,
@@ -1652,6 +1622,7 @@ export default class CheckboxStyleMenuPlugin extends Plugin {
 	 */
 	private validateTriggerMethod(
 		value: any,
+		defaultTriggerMethod: "long-press" | "right-click" | "both" = "both",
 	): "long-press" | "right-click" | "both" {
 		if (
 			value === "long-press" ||
@@ -1660,7 +1631,7 @@ export default class CheckboxStyleMenuPlugin extends Plugin {
 		) {
 			return value;
 		}
-		return DEFAULT_SETTINGS.triggerMethod;
+		return defaultTriggerMethod;
 	}
 
 	/**
@@ -1682,16 +1653,20 @@ export default class CheckboxStyleMenuPlugin extends Plugin {
 	 * Ensures all known styles have boolean values, provides defaults for missing styles
 	 */
 	private validateStylesObject(styles: any): { [symbol: string]: boolean } {
+		const defaultStyles = Object.fromEntries(
+			this.pluginConfig.checkboxStyles.map((style) => [style.symbol, true])
+		);
+
 		if (!styles || typeof styles !== "object") {
-			return DEFAULT_SETTINGS.styles;
+			return defaultStyles;
 		}
 
 		const validated: { [symbol: string]: boolean } = {};
-		CHECKBOX_STYLES.forEach((style) => {
+		this.pluginConfig.checkboxStyles.forEach((style) => {
 			validated[style.symbol] =
 				typeof styles[style.symbol] === "boolean"
 					? styles[style.symbol]
-					: DEFAULT_SETTINGS.styles[style.symbol];
+					: defaultStyles[style.symbol];
 		});
 
 		return validated;
@@ -1821,12 +1796,12 @@ class CheckboxStyleSettingTab extends PluginSettingTab {
 		this.addStyleCategory(
 			toggleContainer,
 			"Basic",
-			CHECKBOX_STYLES.slice(0, 6),
+			this.plugin.pluginConfig.checkboxStyles.slice(0, 6),
 		); // Common task states
 		this.addStyleCategory(
 			toggleContainer,
 			"Extras",
-			CHECKBOX_STYLES.slice(6),
+			this.plugin.pluginConfig.checkboxStyles.slice(6),
 		); // Extended/specialized states
 
 		this.addResetButton(); // Convenience function to restore defaults
@@ -1947,7 +1922,7 @@ class CheckboxStyleSettingTab extends PluginSettingTab {
 	private addStyleCategory(
 		container: HTMLElement,
 		categoryName: string,
-		styles: (typeof CHECKBOX_STYLES)[number][],
+		styles: CheckboxStyle[],
 	): void {
 		new Setting(container).setName(categoryName).setHeading();
 		styles.forEach((style) => this.createStyleToggle(container, style));
@@ -1959,9 +1934,9 @@ class CheckboxStyleSettingTab extends PluginSettingTab {
 			.setName("Reset all checkbox style selections to default")
 			.addButton((button) =>
 				button.setButtonText("Reset").onClick(async () => {
-					this.plugin.settings.styles = {
-						...DEFAULT_SETTINGS.styles,
-					};
+					this.plugin.settings.styles = Object.fromEntries(
+						this.plugin.pluginConfig.checkboxStyles.map((style) => [style.symbol, true])
+					);
 					await this.plugin.saveSettings();
 					this.display(); // Refresh UI to show changes
 					new Notice("Checkbox styles reset to default");
@@ -2026,7 +2001,7 @@ class CheckboxStyleSettingTab extends PluginSettingTab {
 	 */
 	private createStyleToggle(
 		container: HTMLElement,
-		style: (typeof CHECKBOX_STYLES)[number],
+		style: CheckboxStyle,
 	): void {
 		try {
 			const setting = new Setting(container);
